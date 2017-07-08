@@ -11,6 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 library(tidyverse)
+library(viridis)
 ```
 
 ```{r}
@@ -27,16 +28,18 @@ data %>%
 ```{r}
 tst <- data %>% 
   mutate(goal_bool = Action == "goal attempt" & Result == "Goal") %>%
+  group_by(team) %>% 
   mutate(lag1 = lag(Action, 1),
          lag2 = lag(Action, 2),
          lag3 = lag(Action, 3),
          lag4 = lag(Action, 4),
          lag5 = lag(Action, 5)) %>% 
-  filter(goal_bool == TRUE)
+  filter(goal_bool == TRUE) 
 
-ggplot(tst, aes(lag5)) + 
+ggplot(tst, aes(lag1, fill=team)) + 
   geom_histogram(stat="count") + 
-  coord_flip()
+  coord_flip() + 
+  scale_fill_viridis(discrete=TRUE)
 ```
 
 

@@ -1,0 +1,239 @@
+---
+title: "Whitecaps R Markdown"
+author: "Ann Chou"
+date: "July 9, 2017"
+output:
+  html_document:
+    css: styles.css
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# install.packages("tidyverse")
+# install.packages(c("ggplot2","RColorBrewer","scales"))
+# install.packages("viridis")
+# install.packages("viridisLite")
+
+#R.Version() //3.4.1
+library(tidyverse) #include ggplots, dplyrr
+#library(plotly)
+#library(dplyr)
+library(viridisLite)
+library(viridis)
+
+```
+
+
+### Whitecaps Data Science Hackathon
+
+This is the plan....
+
+## Load Data 1- AllActions
+
+```{r data - AllActions}
+setwd("C:/Users/Ann Chou/Code/dev/vansashteam1/vansash2/src")
+AllActions <- read.csv("../data/AllActions.csv") ##currently AllActiions.csv is just 2016 one.
+dim(AllActions)  ## 486332  x   21
+head(AllActions)
+```
+
+```{r}
+unique(AllActions$Result)
+```
+
+```{r}
+unique(AllActions$positiondetail)
+```
+
+## Load Data 2- TeamData2015
+
+```{r data - TeamData}
+TeamData2015 = read.csv(file = "../data/TeamDataMLS2015.csv")
+TeamData <- TeamData2015
+TeamData = TeamData %>% 
+  rename(Match = Matchid)
+TeamData$HomeAway = recode(TeamData$HomeAway, "U" = "Away", "T" = "Home")
+TeamData$Result = recode(TeamData$Result, "V" = "Loss", "G" = "Draw", "W" = "Win")
+```
+
+
+## Load Data 3 - PlayerData2015
+
+```{r data - PlayerData}
+PlayerData2015 = read.csv("../data/PlayerDataMLS2015.csv")
+PlayerData <- PlayerData2015
+PlayerData = PlayerData %>% 
+  rename(Match = Matchid,
+         player = Player)
+```
+
+## Join Data (2015)
+
+```{r data - action}
+AllActionsWithTeam = full_join(AllActions, TeamData, by = c("Match"))
+
+FullAllActions = full_join(AllActionsWithTeam, PlayerData, by = c("Match", "player"))
+head(FullAllActions)
+
+```
+
+## first plot : home and away wins to rank teams
+
+```{r}
+variable.names(TeamData)
+TeamData %>% 
+  group_by(Team) %>%
+  filter(HomeAway == "Away", 
+         Result == "Loss") %>%
+  summarize()
+```
+<!--https://www.mlssoccer.com/standings/mls/2015/-->
+```{r}
+#summary(TeamData)
+```
+## Team Win - Home vs away - year 2015  (graph embeded)
+```{r graph 2015, echo=FALSE}
+## use different scale
+ggplot(data = TeamData, aes(x = HomeAway, fill = Result)) + geom_histogram(stat = "count", position = "dodge") + facet_wrap(~Team) + 
+  scale_fill_viridis(discrete=TRUE)
+
+#TODO - how to use win group by team by homeaway to "factor" the order
+#TODO - Chicage Fire - how to prevent the missing zero-height bar being taken over.
+```
+
+```{r}
+#install.packages("scatterD3")
+#install.packages("ellipse")
+library(scatterD3)  #not avail for R3.4
+#reference: https://cran.r-project.org/web/packages/scatterD3/vignettes/introduction.html
+#scatterD3(x = mtcars$wt, y = mtcars$mpg) # TEST for scatter D3: work
+scatterD3(data = AllActions, x = LocX, y = LocY, 
+          point_size = 100, point_opacity = 0.5,
+          hover_size = 4, hover_opacity = 1)
+
+```
+
+```{r echo=FALSE}
+##plot_ly()
+AllActions %>%
+  plot_ly(x = ~LocX, y = ~LocY, splot = ~factor(HomeAway),
+    ) %>% 
+   layout(hovermode = "closest", showlegend = FALSE) %>%
+    onRender('
+    function(el, x) { 
+      var graphDiv = document.getElementById(el.id);
+      // reduce the opacity of every trace except for the hover one
+      el.on("plotly_hover", function(e) { 
+        var traces = [];
+        for (var i = 0; i < x.data.length; i++) {
+          if (i !== e.points[0].curveNumber) traces.push(i);
+        }
+        Plotly.restyle(graphDiv, "opacity", 0.2, traces);
+      })
+     el.on("plotly_unhover", function(e) { 
+       var traces = [];
+       for (var i = 0; i < x.data.length; i++) traces.push(i);
+       Plotly.restyle(graphDiv, "opacity", 1, traces);
+     })
+    } 
+  ')
+
+
+
+```
+
+
+```{r Goals}
+Goals = FullAllActions %>% 
+  filter(Action == "goal attempt" & Result.x == "Goal") 
+```
+
+
+<!--- Begin Javascript code --->
+<!-- template
+head(TeamData)
+library("jsonlite")
+cat (
+  paste(
+  '<script>
+    var teamdata = ',toJSON(TeamData),';
+    var AllActions = ',toJSON(AllActions),';
+    
+    
+    
+    //now we can put more javascript here
+    
+    
+  </script>'
+  , sep="")
+)
+
+note css: styles.css  need to add to YAML
+-->
+
+<!-- test for d3
+```{r results='asis'}  
+ 
+cat('
+<script>
+  d3.select("body").append("p").text("d3 made me")
+</script>
+')
+
+```
+-->
+<!-- test for jsonlite
+```{r results='asis'}  
+# library("jsonlite") 
+cat(
+  paste(
+  '<script>
+    var data = ',toJSON(iris[c(5,1,2)]),';
+  </script>'
+  , sep="")
+)
+
+```
+-->
+<script src="https://d3js.org/d3.v4.min.js"></script>
+
+```{r results='asis'}  
+#head(TeamData)
+# library("jsonlite")
+
+
+cat (
+  paste(
+
+  <script>
+
+    var teamdata = ',toJSON(TeamData),';
+//    var AllActions = ',toJSON(AllActions),';
+    
+    
+    
+    //now we can put more javascript here
+    
+    
+  </script>'
+  , sep="")
+)
+
+```
+
+
+```{r results='asis'}  
+
+```
+
+
+<!--html_preserve--> 
+<div><select id="selector"></select></div> 
+<div class="equation"></div> 
+<div class="equation"></div> 
+<div class="chart"></div> 
+<!--/html_preserve-->
+
+css: styles.css 

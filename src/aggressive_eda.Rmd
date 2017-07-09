@@ -5,26 +5,32 @@ date: '2017-07-08'
 output: pdf_document
 ---
 
+## Initialization:
 ```{r}
+# Loading libraries:
 suppressMessages(library(tidyverse))
 ```
 
 ```{r}
+# Reading data:
 data <- suppressMessages(read_csv("../data/AllActionsperMatchUSAMajorLeagueSoccer2016.csv"))
 match_data <- suppressMessages(read_csv("../data/TeamDataMLS2016.csv"))
 
+# Renaming variable:
 match_data <- match_data %>%
   rename(match_result = Result)
 ```
 
 ```{r}
-# Joining the two tables:
+# Joining the two data tables:
 data <- data %>% 
   left_join(match_data, by=c("Match" = "Matchid", `Team in possession` = "Team"))
 ```
 
+## Data wrangling
 
 ```{r}
+# Calculating number of aggressive turnovers per team per match:
 aggressive_df <- data %>% 
   mutate(next_team = lead(team)) %>% 
   mutate(turn_over = team != next_team) %>% 
@@ -34,21 +40,16 @@ aggressive_df <- data %>%
   group_by(Match, `Team in possession`) %>% 
   summarize(num_aggressive_turnovers = sum(aggressive_turnover),
             match_result = unique(match_result),
-            HomeAway = unique(HomeAway)) %>% 
+            HomeAway = unique(HomeAway),
+            num_passes = unique(`#Passes`),
+            num_goals = unique(goals)) %>% 
   mutate(is_home = ifelse(HomeAway == "T", TRUE, FALSE)) %>% 
   mutate(is_win = match_result == "W")
-
-aggressive_df
 ```
 
-```{r}
-# The following code was obtained from: https://sebastiansauer.github.io/convert_logit2prob/
-logit2prob <- function(logit){
-  odds <- exp(logit)
-  prob <- odds / (1 + odds)
-  return(prob)
-}
-```
+## Creating models
+
+#### Model showing teams play more aggressive at home
 
 ```{r}
 # Teams tend to play more aggressive when they are at home:
@@ -56,11 +57,23 @@ model <- lm(num_aggressive_turnovers ~ is_home, data=aggressive_df)
 summary(model)
 ```
 
+The result above shows that teams, on average, have 10.391 more aggressive turn overs when they are playing at home. In other words, teams play more aggressive at home.
+
+#### Model showing if it is a good idea to play aggressive or not
+
+Now, we can create a model to see whether or not playing aggressive can lead to a higher chance of winning either HOME or AWAY. 
+
 ```{r}
-# Teams should be more aggressive when they are away in order to best improve their chances of winning:
+# Creating logistic model:
 model2 <- glm(is_win ~ num_aggressive_turnovers + is_home + is_home*num_aggressive_turnovers, data=aggressive_df)
+
+# Displaying results:
 summary(model2)
 ```
+
+Great, now that we've created a model, we can see that playing aggressive both at HOME and AWAY may not be a good idea. There is a negative, although very slightly, correlation between winning and `num_aggressive_turnovers`. 
+
+The model is further interpretted below: 
 
 $$P(win) = \frac{1}{1 + e^{-x}}$$
 Where: 
@@ -86,5 +99,48 @@ The above is the chances of winning under the following conditions:
 
   * Home
   * Zero aggressive turn overs
+  
+NOTE: There are caveates that go along with this interpretation
 
+  * There may be confounders at play
+  * Many unaccounted variables
+  * There are other caveates
+
+#### Model that includes passess as a proxy for possession time
+
+```{r}
+# Creating logistic model:
+model3 <- glm(is_win ~ num_aggressive_turnovers + is_home + num_passes + is_home*num_aggressive_turnovers*num_passes, data=aggressive_df)
+
+# Displaying results:
+summary(model3)
+```
+
+There are a couple things that are troubling about the above model:
+
+  * Because of the additional interaction term, this model is a lot less intuitive and more difficult to interpret
+  * None of the coefficients are "significant"
+  * Johann, over the phone I said that passes were negatively correlated with winning, this can be shown below:
+  
+```{r}
+# Creating logistic model:
+model4 <- glm(is_win ~ num_passes, data=aggressive_df)
+
+# Displaying results:
+summary(model4)
+```
+
+
+The above result is super counter-intuitive. Teams that pass a lot are more likely to lose. This seems wrong to me. Perhaps this is because crappier teams require more passes to get it up the field? Maybe its because they are passing it between their defenders a lot of the time. The passes may not be up field passes. The passes may not have even been completed.  
+
+As a result, I would be very careful with saying anything to do with causality. We shouldn't say whether or not passing is good or bad. One suggestion may be to try to find the posession times for each team of each game instead of using passing as a proxy. 
+
+#### Given more time:
+
+If given more time to work, I would try the following:
+
+* See if I can tell a more compelling story or make a better model by "binning" each team in a match as an "aggressive" or "passive" team. We can do this by setting a threshold on the number of aggressive turnovers. All occassions that are under this threshold are considered "passive" - otherwise, they are considered aggressive. Then, with this new classification of a team, we can see whether or not an aggressive team has a better chance of winning by doing another `glm`
+* Make visualizations for models. This would involve showing the predicted value of the `glm` in one color as well as the actual values in a different color. 
+
+##### Good luck everyone. Wish I could be there.
 

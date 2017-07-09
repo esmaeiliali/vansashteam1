@@ -35,6 +35,19 @@ This is the plan....
 ```{r data - AllActions}
 setwd("C:/Users/Ann Chou/Code/dev/vansashteam1/vansash2/src")
 AllActions <- read.csv("../data/AllActions.csv") ##currently AllActiions.csv is just 2016 one.
+Actions.2015 = read.csv(file = "../data/AllActionsperMatchUSAMajorLeagueSoccer2015.csv")
+Team.2015 = read.csv(file = "../data/TeamDataMLS2015.csv")
+
+head(Actions.2015)
+head(Team.2015)
+
+venue.data = Team.2015 %>% 
+  select(Team, Match = Matchid, HomeAway, Match.Result = Result)
+head(venue.data)
+
+joined.2015 = full_join(Actions.2015, venue.data, by = "Match")
+head(joined.2015)
+
 dim(AllActions)  ## 486332  x   21
 head(AllActions)
 ```
@@ -74,6 +87,7 @@ PlayerData = PlayerData %>%
 ```{r data - action}
 AllActionsWithTeam = full_join(AllActions, TeamData, by = c("Match"))
 
+
 FullAllActions = full_join(AllActionsWithTeam, PlayerData, by = c("Match", "player"))
 head(FullAllActions)
 
@@ -102,17 +116,104 @@ ggplot(data = TeamData, aes(x = HomeAway, fill = Result)) + geom_histogram(stat 
 #TODO - how to use win group by team by homeaway to "factor" the order
 #TODO - Chicage Fire - how to prevent the missing zero-height bar being taken over.
 ```
+```{r}
+AllActionsWithTeam
+Overhalf <- joined.2015$LocX >=50
+Overhalf_action <- joined.2015 [Overhalf,]
+
+Interception <- Overhalf_action$Action =="interception"
+
+Interception_action <-Overhalf_action[Interception, ]
+
+Overhalf_action$Steal <- Overhalf_action$Action =="defending action" & Overhalf_action$Result == "win"
+Steal <- Overhalf_action$Steal
+Steal_action <- Overhalf_action [Steal,]
+Steal_action
+  
+summary(Overhalf_action$Steal)
+summary(Overhalf_action)
+
+head(Steal_action)
+
+#Incept_Action_inAll <- AllActions [Interception,]
+#Incept_Action <- Overhalf_action[Interception,]
+dim(Steal_action)
+
+
+
+
+```
 
 ```{r}
+#very slow
 #install.packages("scatterD3")
 #install.packages("ellipse")
-library(scatterD3)  #not avail for R3.4
+library(scatterD3)  #  HTML widget
 #reference: https://cran.r-project.org/web/packages/scatterD3/vignettes/introduction.html
 #scatterD3(x = mtcars$wt, y = mtcars$mpg) # TEST for scatter D3: work
-scatterD3(data = AllActions, x = LocX, y = LocY, 
-          point_size = 100, point_opacity = 0.5,
-          hover_size = 4, hover_opacity = 1)
 
+
+
+scatterD3(data = Steal_action[Steal_action$HomeAway == "T", ], x = LocX, y = LocY, 
+          col_var = half, symbol_var = postion,
+          point_size = 100, point_opacity = 0.2,
+          hover_size = 4, hover_opacity = 1,
+          caption = list(title = "Steal_action at Home - Overhalf"),
+          xlim=c(50,100), ylim=c(0,100)
+          )
+
+
+```
+
+```{r}
+#tooltip <-
+  
+scatterD3(data = Steal_action[Steal_action$HomeAway == "U", ], x = LocX, y = LocY, 
+          col_var = half, symbol_var = postion,
+          point_size = 100, point_opacity = 0.2,
+          hover_size = 4, hover_opacity = 1,
+          caption = list(title = "Steal_action at Away - Overhalf"),
+          xlim=c(50,100), ylim=c(0,100),
+          lines = data.frame(slope = 90, 
+                             intercept = 99,
+                             stroke = "red",
+                             stroke_width = 5,
+                             stroke_dasharray = "10,5")
+          
+          )
+```
+
+
+```{r}
+
+scatterD3(data = Interception_action, x = LocX, y = LocY, 
+          col_var = half, symbol_var = postion,
+          point_size = 100, point_opacity = 0.2,
+          hover_size = 4, hover_opacity = 1,
+          caption = list(title = "Steal_action",
+                         subtitle = "---------",
+                         text = "showing")
+          
+          )
+```{r}
+
+```
+
+```
+
+```{r}
+defending <- Overhalf_action$Action =="defending action"
+defending_Action_inAll <- AllActions [defending, ]
+
+scatterD3(data = defending_Action_inAll, x = LocX, y = LocY, 
+          col_var = Round, symbol_var = postion,
+          point_size = 100, point_opacity = 0.5,
+          hover_size = 4, hover_opacity = 1,
+          caption = list(title = "defending_Action_inAll",
+                         subtitle = "---------",
+                         text = "showing")
+          
+          )
 ```
 
 ```{r echo=FALSE}
@@ -143,6 +244,42 @@ AllActions %>%
 
 
 ```
+
+
+```{r}
+library(d3heatmap)  #  HTML widget
+#reference: https://cran.r-project.org/web/packages/d3heatmap/index.html
+#reference2: https://blog.rstudio.org/2015/06/24/d3heatmap/
+#url <- "http://datasets.flowingdata.com/ppg2008.csv"
+#nba_players <- read.csv(url, row.names = 1)
+#d3heatmap(nba_players, scale = "column")
+ # TEST for d3heatmap: work
+help("d3heatmap")
+
+#d3heatmap(Steal_action, scale = "column") x must be numeric
+```
+
+```{r}
+#just playing with heatmap
+library("dplyr")
+library("knitr")
+
+set.seed(1)
+
+mat <- matrix(rnorm(25), 5, 5, 
+              dimnames = list(LETTERS[1:5], 1:5))
+
+mat %>%
+  as.data.frame %>%
+  kable
+
+library("RColorBrewer")
+my.palette <- colorRampPalette(c("green", "black", "red"))(n = 12)
+heatmap(mat[nrow(mat):1, ], Rowv = NA, Colv = NA, scale = "none", col = my.palette)
+
+d3heatmap(mat, Rowv = NA, Colv = NA, colors = heat.colors(12))
+```
+
 
 
 ```{r Goals}

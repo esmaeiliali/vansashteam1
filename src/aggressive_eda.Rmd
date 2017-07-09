@@ -71,6 +71,7 @@ model2 <- glm(is_win ~ num_aggressive_turnovers + is_home + is_home*num_aggressi
 summary(model2)
 ```
 
+
 Great, now that we've created a model, we can see that playing aggressive both at HOME and AWAY may not be a good idea. There is a negative, although very slightly, correlation between winning and `num_aggressive_turnovers`. 
 
 The model is further interpretted below: 
@@ -140,7 +141,7 @@ As a result, I would be very careful with saying anything to do with causality. 
 If given more time to work, I would try the following:
 
 * See if I can tell a more compelling story or make a better model by "binning" each team in a match as an "aggressive" or "passive" team. We can do this by setting a threshold on the number of aggressive turnovers. All occassions that are under this threshold are considered "passive" - otherwise, they are considered aggressive. Then, with this new classification of a team, we can see whether or not an aggressive team has a better chance of winning by doing another `glm`
-* Make visualizations for models. This would involve showing the predicted value of the `glm` in one color as well as the actual values in a different color. 
+* Make visualizations for models. This would involve making predictions on whether or not a team won a match and showing how often we got this predictions correct. 
 
 ##### Good luck everyone. Wish I could be there.
 

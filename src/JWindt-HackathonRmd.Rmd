@@ -1,0 +1,99 @@
+---
+title: "Whitecaps R Markdown"
+author: "EPSE 681"
+date: "July 8, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidy)
+```
+
+## R Markdown
+
+### Whitecaps Data Science Hackathon
+
+
+```{r}
+AllActions = read.csv("AllActions.csv")
+head(AllActions)
+
+```
+
+```{r}
+Goals = AllActions %>% 
+  filter(Action == "goal attempt" & Result == "Goal") 
+
+ggplot(Goals, aes(x = LocX, y = LocY)) + geom_jitter(size = 2, alpha = 0.1) + theme_bw()
+```
+
+```{r}
+
+TeamData = read.csv("MLSTeamData.csv")
+TeamData = TeamData %>% 
+  rename(Match = Matchid)
+
+PlayerData = read.csv("MLSPlayerData.csv")
+PlayerData = PlayerData %>% 
+  rename(Match = Matchid,
+         player = Player)
+
+AllActionsWithTeam = full_join(AllActions, TeamData, by = c("Match"))
+
+FullAllActions = full_join(AllActionsWithTeam, PlayerData, by = c("Match", "player"))
+head(FullAllActions)
+ 
+```
+
+```{r}
+Goals = FullAllActions %>% 
+  filter(Action == "goal attempt" & Result.x == "Goal") 
+
+head(Goals)
+ggplot(Goals, aes(x = LocX, y = LocY, colour = Home.Away)) + geom_jitter(size = 2, alpha = 0.1) + theme_bw()
+
+```
+
+
+
+```{r}
+PrecedingActions <- AllActions %>% 
+  mutate(goal_bool = Action == "goal attempt" & Result == "Goal") %>%
+  mutate(lag1 = lag(Action, 1),
+         lag2 = lag(Action, 2),
+         lag3 = lag(Action, 3),
+         lag4 = lag(Action, 4),
+         lag5 = lag(Action, 5)) %>% 
+  filter(goal_bool == TRUE)
+
+head(PrecedingActions)
+```
+
+```{r}
+ggplot(PrecedingActions, aes(lag5)) + 
+  geom_histogram(stat="count") + 
+  coord_flip()
+
+```
+
+
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+data <- read_csv("../data/AllActionsperMatchUSAMajorLeagueSoccer2016.csv")
+head(data) %>% 
+data %>% 
+  filter(Action == "goal attempt" & Result == "Goal") %>% 
+  
+tst <- data %>% 
+  mutate(goal_bool = Action == "goal attempt" & Result == "Goal") %>%
+  mutate(lag1 = lag(Action, 1),
+         lag2 = lag(Action, 2),
+         lag3 = lag(Action, 3),
+         lag4 = lag(Action, 4),
+         lag5 = lag(Action, 5)) %>% 
+  filter(goal_bool == TRUE)
+
+ggplot(tst, aes(lag5)) + 
+  geom_histogram(stat="count") + 
+  coord_flip()

@@ -1,0 +1,60 @@
+---
+title: "Aggressiveness"
+author: "Andrew Lim"
+date: '2017-07-08'
+output: github_document
+---
+
+```{r}
+suppressMessages(library(tidyverse))
+```
+
+```{r}
+data <- suppressMessages(read_csv("../data/AllActionsperMatchUSAMajorLeagueSoccer2016.csv"))
+match_data <- suppressMessages(read_csv("../data/TeamDataMLS2016.csv"))
+
+match_data <- match_data %>%
+  rename(match_result = Result)
+```
+
+```{r}
+# Joining the two tables:
+data <- data %>% 
+  left_join(match_data, by=c("Match" = "Matchid", `Team in possession` = "Team"))
+```
+
+
+
+```{r}
+aggressive_df <- data %>% 
+  mutate(next_team = lead(team)) %>% 
+  mutate(turn_over = team != next_team) %>% 
+  mutate(aggressive_turnover = LocX > 50 & turn_over == TRUE) %>% 
+  group_by(Match, `Team in possession`) %>% 
+  summarize(num_aggressive_turnovers = sum(aggressive_turnover),
+            match_result = unique(match_result),
+            HomeAway = unique(HomeAway)) %>% 
+  mutate(is_home = ifelse(HomeAway == "T", TRUE, FALSE)) %>% 
+  mutate(is_win = match_result == "W")
+```
+
+```{r}
+# Teams tend to play more aggressive when they are at home:
+model <- glm(num_aggressive_turnovers ~ is_home, data=aggressive_df)
+summary(model)
+```
+
+```{r}
+# Teams should be more aggressive when they are away in order to best improve their chances of winning:
+model2 <- glm(is_win ~ num_aggressive_turnovers + is_home + is_home*num_aggressive_turnovers, data=aggressive_df)
+summary(model2)
+```
+
+```{r}
+model3 <- glm(is_win ~ num_aggressive_turnovers + is_home, data=aggressive_df)
+summary(model3)
+```
+
+
+
+

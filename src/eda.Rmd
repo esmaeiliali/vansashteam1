@@ -20,12 +20,6 @@ head(data)
 ```
 
 ```{r}
-data %>% 
-  filter(Action == "goal attempt" & Result == "Goal") %>% 
-  
-```
-
-```{r}
 tst <- data %>% 
   mutate(goal_bool = Action == "goal attempt" & Result == "Goal") %>%
   group_by(team) %>% 
@@ -41,6 +35,32 @@ ggplot(tst, aes(lag1, fill=team)) +
   coord_flip() + 
   scale_fill_viridis(discrete=TRUE)
 ```
+
+```{r}
+passes <- data %>% 
+  filter(Action == "pass") 
+
+# 10 15 25
+ggplot(passes, aes(distance)) + 
+  geom_histogram()
+```
+
+```{r}
+data %>% 
+  mutate(goal_bool = Action == "goal attempt" & Result == "Goal") %>%
+  group_by(team) %>% 
+  mutate(lag1 = lag(Action, 1),
+         lag1_distance = lag(distance),
+         lag2 = lag(Action, 2),
+         lag3 = lag(Action, 3),
+         lag4 = lag(Action, 4),
+         lag5 = lag(Action, 5)) %>% 
+  filter(goal_bool == TRUE) %>% 
+  mutate(is_pass = lag1 == "pass") %>% 
+  filter
+```
+
+
 
 
 

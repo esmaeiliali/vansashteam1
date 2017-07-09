@@ -73,6 +73,7 @@ $$x = 0.65 - 0.0036 * (\text{number of aggressive turnovers) + 0.883 * (is at ho
 ```
 
 The above is the chances of winning under the following conditions:
+
   * Away
   * Zero aggressive turn overs
   
@@ -82,6 +83,7 @@ The above is the chances of winning under the following conditions:
 ```
 
 The above is the chances of winning under the following conditions:
+
   * Home
   * Zero aggressive turn overs
 

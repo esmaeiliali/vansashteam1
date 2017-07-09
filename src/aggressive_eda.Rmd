@@ -2,7 +2,7 @@
 title: "Aggressiveness"
 author: "Andrew Lim"
 date: '2017-07-08'
-output: github_document
+output: pdf_document
 ---
 
 ```{r}
@@ -24,23 +24,35 @@ data <- data %>%
 ```
 
 
-
 ```{r}
 aggressive_df <- data %>% 
   mutate(next_team = lead(team)) %>% 
   mutate(turn_over = team != next_team) %>% 
   mutate(aggressive_turnover = LocX > 50 & turn_over == TRUE) %>% 
+  mutate(aggressive_turnover_by_team = aggressive_turnover == TRUE & `Team in possession` == next_team) %>% 
+  select(`Team in possession`, next_team, aggressive_turnover, aggressive_turnover_by_team, everything()) %>%
   group_by(Match, `Team in possession`) %>% 
   summarize(num_aggressive_turnovers = sum(aggressive_turnover),
             match_result = unique(match_result),
             HomeAway = unique(HomeAway)) %>% 
   mutate(is_home = ifelse(HomeAway == "T", TRUE, FALSE)) %>% 
   mutate(is_win = match_result == "W")
+
+aggressive_df
+```
+
+```{r}
+# The following code was obtained from: https://sebastiansauer.github.io/convert_logit2prob/
+logit2prob <- function(logit){
+  odds <- exp(logit)
+  prob <- odds / (1 + odds)
+  return(prob)
+}
 ```
 
 ```{r}
 # Teams tend to play more aggressive when they are at home:
-model <- glm(num_aggressive_turnovers ~ is_home, data=aggressive_df)
+model <- lm(num_aggressive_turnovers ~ is_home, data=aggressive_df)
 summary(model)
 ```
 
@@ -50,11 +62,27 @@ model2 <- glm(is_win ~ num_aggressive_turnovers + is_home + is_home*num_aggressi
 summary(model2)
 ```
 
+$$P(win) = \frac{1}{1 + e^{-x}}$$
+Where: 
+
+$$x = 0.65 - 0.0036 * (\text{number of aggressive turnovers) + 0.883 * (is at home) - 0.033 * (number of aggressive turnovers * is at home) }$$
+
+
 ```{r}
-model3 <- glm(is_win ~ num_aggressive_turnovers + is_home, data=aggressive_df)
-summary(model3)
+1/(1 + exp(-0.65))
 ```
 
+The above is the chances of winning under the following conditions:
+  * Away
+  * Zero aggressive turn overs
+  
+  
+```{r}
+1/(1+exp(-(0.65 + 0.883)))
+```
 
+The above is the chances of winning under the following conditions:
+  * Home
+  * Zero aggressive turn overs
 
 
